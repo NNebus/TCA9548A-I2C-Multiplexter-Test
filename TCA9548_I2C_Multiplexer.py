@@ -1,30 +1,48 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (c) 2017 Richard Hull and contributors
+# See LICENSE.rst for details.
 
-# Change channel of TCA9548A
-# Example: sudo ./TCA9548_I2C_Multiplexer.py 0
-#TCA9548_I2C_Multiplexer
+"""
+TCA9548A I2C Bus Scanner
+
+Based on: https://learn.adafruit.com/adafruit-tca9548a-1-to-8-i2c-multiplexer-breakout?view=all
+Assumes the multiplexer is on address 0x70
+"""
+
+import smbus2
+
+TCA_ADDR = 0x70
 
 
-import smbus
-import time
-import sys
+def mux_select(bus, tca_port):
+    assert(0 <= tca_port <= 7)
+    bus.write_byte(TCA_ADDR, 1 << tca_port)
 
-I2C_address = 0x70
-I2C_bus_number = 1
-I2C_ch_0 = 0b00000001
-I2C_ch_1 = 0b00000010
-I2C_ch_2 = 0b00000100
-I2C_ch_3 = 0b00001000
-I2C_ch_4 = 0b00010000
-I2C_ch_5 = 0b00100000
-I2C_ch_6 = 0b01000000
-I2C_ch_7 = 0b10000000
 
-def I2C_setup(i2c_channel_setup):
-    bus = smbus.SMBus(I2C_bus_number)
-    bus.write_byte(I2C_address,i2c_channel_setup)
-    time.sleep(0.1)
-    print "TCA9548A I2C channel status:", bin(bus.read_byte(I2C_address))
+def scan():
+    port = 1   # Change to port 0 for orig Raspberry Pi, Orange Pi, etc
+    bus = smbus2.SMBus(port)
 
-I2C_setup(int(sys.argv[1]))
+    print("Scanning I2C devices on TCA984A Multiplexer")
 
+    for tca_port in range(8):
+        print("TCA Port {0}".format(tca_port))
+        mux_select(bus, tca_port)
+
+        for addr in range(0x03, 0x78):
+            if addr == TCA_ADDR:
+                continue
+
+            try:
+                bus.read_byte(addr)
+                print("Found I2C 0x{0:02X}".format(addr))
+            except:
+                pass
+
+    print("\ndone")
+    bus.close()
+
+
+if __name__ == "__main__":
+    scan()
